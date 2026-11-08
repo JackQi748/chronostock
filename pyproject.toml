@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chronostock"
+version = "0.1.0"
+description = "ChronoStock - reproducible historical stock analysis, point-in-time replay and deterministic strategy backtesting"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "JackQi748" }]
+keywords = ["stock", "backtesting", "quant", "duckdb", "polars", "technical-analysis"]
+dependencies = [
+    "numpy>=1.26",
+    "polars>=1.9",
+    "duckdb>=1.1",
+    "pyarrow>=16",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+market = ["yfinance>=0.2.40", "akshare>=1.14"]
+dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.6"]
+
+[project.scripts]
+chronostock = "chronostock.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["chronostock*"]
+
+[tool.setuptools.package-data]
+chronostock = ["web/*.html", "web/*.js", "web/*.css"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]

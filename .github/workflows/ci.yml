@@ -1,0 +1,49 @@
+name: CI / 历史快照归档
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # 工作日 18:00 北京时间 = 10:00 UTC，生成一份可归档的历史分析快照
+    - cron: '0 10 * * 1-5'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: 代码规范
+        run: ruff check --no-cache chronostock tests
+      - name: 前端语法检查
+        run: node --check chronostock/web/app.js
+      - name: 单元测试
+        run: pytest -q
+      - name: 端到端离线冒烟（demo -> analyze -> backtest -> optimize -> report）
+        run: |
+          chronostock demo --start 2021-01-01 --end 2023-12-31
+          chronostock symbols
+          chronostock analyze AAPL --as-of 2023-06-30
+          chronostock backtest AAPL --strategy dual_momentum
+          chronostock optimize AAPL --strategy ma_cross --walk-forward --train-bars 300 --test-bars 80
+          chronostock report AAPL --as-of 2023-06-30 --out chronostock-snapshot.html
+      - name: 归档报告
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: chronostock-history-snapshot
+          path: chronostock-snapshot.html
+          retention-days: 30

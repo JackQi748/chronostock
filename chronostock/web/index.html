@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ChronoStock · 历史股票分析工作台</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js" onerror="window.__echartsFailed=true"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">◷</span> ChronoStock <small>可复现的历史回溯实验室</small></div>
+    <div class="controls">
+      <select id="symbolSelect" aria-label="标的"></select>
+      <input type="date" id="asOf" aria-label="历史时点">
+      <button id="refreshBtn" class="btn primary">刷新</button>
+      <button id="themeBtn" class="btn ghost" title="切换主题">◐</button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner hidden"></div>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="overview">综合评分</button>
+    <button class="tab" data-tab="replay">行情回放</button>
+    <button class="tab" data-tab="backtest">策略回测</button>
+    <button class="tab" data-tab="optimize">参数优化</button>
+    <button class="tab" data-tab="stats">历史统计</button>
+    <button class="tab" data-tab="report">报告与数据</button>
+  </nav>
+
+  <main>
+    <!-- 综合评分 -->
+    <section class="panel active" id="tab-overview">
+      <div class="row">
+        <div class="card score-card">
+          <h2>历史时点评分</h2>
+          <div class="score-wrap">
+            <div id="scoreGauge" class="gauge"></div>
+            <div>
+              <div id="scoreSignal" class="big">—</div>
+              <div id="scoreTrend" class="muted">—</div>
+              <div id="scoreMeta" class="muted small"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>六因子拆解</h2>
+          <div id="factorBars"></div>
+          <div id="caveats" class="caveats"></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>关键指标卡</h2>
+        <div id="kpiGrid" class="grid"></div>
+      </div>
+      <div class="row">
+        <div class="card"><h2>关键价位</h2><div id="levelsTable"></div></div>
+        <div class="card"><h2>当前值历史分位</h2><div id="pctTable"></div></div>
+      </div>
+    </section>
+
+    <!-- 行情回放 -->
+    <section class="panel" id="tab-replay">
+      <div class="card">
+        <div class="card-head">
+          <h2>K 线 / 均线 / 布林带（截至所选时点）</h2>
+          <div class="muted small" id="replayStats"></div>
+        </div>
+        <div id="chartPrice" class="chart tall"></div>
+        <div id="chartVolume" class="chart"></div>
+      </div>
+    </section>
+
+    <!-- 策略回测 -->
+    <section class="panel" id="tab-backtest">
+      <div class="card">
+        <div class="form-row">
+          <label>策略 <select id="btStrategy"></select></label>
+          <label class="grow">参数 JSON <input id="btParams" value="{}" spellcheck="false"></label>
+          <label>允许做空 <input type="checkbox" id="btShort"></label>
+          <button id="btRun" class="btn primary">运行回测</button>
+        </div>
+        <div class="muted small">信号在 bar i 收盘产生、bar i+1 开盘成交；默认手续费 5bps、滑点 2bps，含买入持有基准。</div>
+      </div>
+      <div class="card"><h2>绩效指标</h2><div id="btMetrics" class="grid"></div></div>
+      <div class="card"><h2>净值与回撤</h2><div id="chartEquity" class="chart tall"></div><div id="chartDrawdown" class="chart"></div></div>
+      <div class="card"><h2>成交流水（最近 20 笔）</h2><div id="tradesTable"></div></div>
+    </section>
+
+    <!-- 参数优化 -->
+    <section class="panel" id="tab-optimize">
+      <div class="card">
+        <div class="form-row">
+          <label>策略 <select id="optStrategy"></select></label>
+          <label>目标函数 <select id="optObjective">
+            <option value="sharpe">夏普</option><option value="sortino">索提诺</option>
+            <option value="calmar">卡玛</option><option value="total_return_pct">总收益</option>
+            <option value="-max_drawdown_pct">最小回撤</option>
+          </select></label>
+          <label class="grow">参数网格 JSON <input id="optGrid" value="{}" spellcheck="false"></label>
+          <label>Walk-forward <input type="checkbox" id="optWalk"></label>
+          <button id="optRun" class="btn primary">开始搜索</button>
+        </div>
+        <div class="muted small">留空则使用该策略内置参数空间；walk-forward 用训练窗选参、测试窗评分，给出样本外净值与过拟合比。</div>
+      </div>
+      <div class="card"><h2>结果</h2><div id="optSummary" class="muted"></div><div id="optTable"></div></div>
+      <div class="card"><h2>样本外净值 / 参数热力图</h2><div id="chartWF" class="chart"></div><div id="chartHeatmap" class="chart"></div></div>
+    </section>
+
+    <!-- 历史统计 -->
+    <section class="panel" id="tab-stats">
+      <div class="card"><h2>月度季节性（日均收益 %）</h2><div id="chartMonthly" class="chart"></div><div id="seasonalityTable"></div></div>
+      <div class="card"><h2>条件事件研究</h2><div id="eventBaseline" class="muted small"></div><div id="eventTable"></div></div>
+    </section>
+
+    <!-- 报告与数据 -->
+    <section class="panel" id="tab-report">
+      <div class="row">
+        <div class="card">
+          <h2>研究报告</h2>
+          <p class="muted">自包含 HTML（内嵌 SVG，无外部依赖）与 Markdown，含数据来源、时点、输入指纹与免责声明。</p>
+          <div class="form-row">
+            <button id="btnHtml" class="btn primary">打开 HTML 报告</button>
+            <button id="btnMd" class="btn">查看 Markdown</button>
+          </div>
+          <div id="reportInfo" class="muted small"></div>
+        </div>
+        <div class="card">
+          <h2>数据同步</h2>
+          <p class="muted small">在线源需网络与可选依赖；演示可显式选择 synthetic，界面会显著标注。</p>
+          <div class="form-row">
+            <input id="syncSymbols" class="grow" placeholder="AAPL,MSFT,600519.SH">
+            <select id="syncSource"><option value="auto">auto</option><option value="yahoo">yahoo</option><option value="stooq">stooq</option><option value="akshare">akshare</option><option value="synthetic">synthetic</option></select>
+            <button id="btnSync" class="btn primary">同步</button>
+          </div>
+          <pre id="syncResult" class="output"></pre>
+        </div>
+      </div>
+      <div class="card">
+        <h2>关于本项目</h2>
+        <p class="muted small">ChronoStock 以「历史时点回放 + 确定性策略回测」为核心：所有指标向后计算、信号次日开盘成交、参数研究提供样本外验证。数据源与每行行情的来源均被记录，结果可由输入指纹复算。本页面所有结论不构成投资建议。</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">ChronoStock · 过往表现不预示未来收益 · 数据以交易所与公司公告等一手来源为准</footer>
+  <script src="app.js"></script>
+</body>
+</html>

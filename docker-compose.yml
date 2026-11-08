@@ -1,0 +1,16 @@
+services:
+  chronostock:
+    build: .
+    image: chronostock:local
+    container_name: chronostock
+    ports:
+      - "8000:8000"
+    environment:
+      CHRONOSTOCK_DB: /data/market.parquet
+      CHRONOSTOCK_REPORTS: /data/reports
+    volumes:
+      - chronostock-data:/data
+    restart: unless-stopped
+
+volumes:
+  chronostock-data:
